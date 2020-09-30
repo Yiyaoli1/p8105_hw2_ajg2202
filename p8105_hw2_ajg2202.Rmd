@@ -13,7 +13,7 @@ library(readxl)
 
 Read the Mr. Trashwheel dataset.
 
-```{r}
+```{r, warning=FALSE}
 trashwheel_df = 
   read_xlsx(
     "./data/Trash-Wheel-Collection-Totals-8-6-19.xlsx",
@@ -69,3 +69,102 @@ left_join(precip_df, month_df, by = "month")
 ```
 
 This dataset contains information from the Mr. Trashwheel trash collector in Baltimore, Maryland. As trash enters the inner harbor, the trash wheel collects that trash, and stores it in a dumpster. The dataset contains information on year, month, and trash collected, including some specific kinds of trash. There are a total of `r nrow(trashwheel_df)` rows in our final dataset. Additional data sheets include month precipitation data.
+
+
+
+## Problem 2
+
+Read and clean the NYC subway dataset.
+
+```{r}
+nycsubway_df = 
+  read_xlsx("./datanyc/NYC_Transit_Subway_Entrance_And_Exit_Data.xlsx") %>%
+  janitor::clean_names()
+```
+
+```{r}
+subway_df = 
+  select(nycsubway_df, line:entry, vending, ada) %>%
+  mutate(entry = recode(entry, "YES" = "TRUE", "NO" = "FALSE"), entry = as.logical(entry),route8 = as.character(route8), route9 = as.character(route9), route10 = as.character(route10),route11 = as.character(route11))
+```
+
+the dataset contains `r names(subway_df)`.
+
+the data cleaning steps contain janitor, select and recode.
+
+the dimension of the resulting dataset is `r nrow(subway_df)`*`r ncol(subway_df)`. 
+
+
+How many distinct stations are there? 
+```{r}
+nrow(distinct(subway_df,station_name, line, .keep_all = T))
+```
+
+How many stations are ADA compliant?
+```{r}
+nrow(filter(distinct(subway_df,station_name, line, .keep_all = T), ada == TRUE))
+```
+
+What proportion of station entrances / exits without vending allow entrance?
+```{r}
+nrow(filter(subway_df, entry == FALSE))/nrow(subway_df)
+```
+
+Reformat data
+
+```{r}
+tidy_subway = pivot_longer(subway_df, route1:route11,
+                           names_to = "route_name",
+                           values_to = "route_number")
+A_train = 
+  filter(tidy_subway, route_number =="A") %>%
+  distinct(station_name, line)
+
+A_train = 
+  filter(tidy_subway, route_number =="A") %>%
+  filter(ada == "TRUE") %>%
+  distinct(station_name, line)
+```
+
+## Problem 3
+
+First step
+
+```{r}
+pols_month_df = 
+  read.csv("./fivethirtyeight_datasets/pols-month.csv") %>%
+  janitor::clean_names() %>%
+  separate(mon, c("year", "month", "day")) %>% 
+  mutate(president = case_when(prez_gop == "1" ~ "gop", prez_dem == "1" ~"dem")) %>% 
+  mutate(month = as.double(month) , month= month.abb[month]) %>% 
+  select(-day,-prez_dem,-prez_gop)
+```
+
+Second step
+
+```{r}
+snp_df = 
+  read.csv("./fivethirtyeight_datasets/snp.csv") %>%
+  janitor::clean_names() %>% 
+  separate(date, c("month", "day", "year")) %>% 
+  mutate(month = as.double(month) , month= month.abb[month]) %>%
+  relocate(year,month) %>% 
+  select(-day)
+```
+
+Third step
+
+```{r}
+unemployment_df = 
+  read.csv("./fivethirtyeight_datasets/unemployment.csv") %>% 
+  pivot_longer (Jan:Dec, names_to = "month", values_to = "unemployment") %>% 
+  janitor::clean_names() %>% 
+  mutate(year=as.character(year))
+```
+
+```{r}
+pols_snp_unemployment= 
+  left_join(pols_month_df,snp_df, by= c("year" = "year","month" = "month")) %>% 
+  left_join(unemployment_df, by= c("year" = "year","month" = "month"))
+```
+
