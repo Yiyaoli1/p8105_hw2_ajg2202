@@ -78,11 +78,11 @@ Read and clean the NYC subway dataset.
 
 ```{r}
 nycsubway_df = 
-  read_xlsx("./datanyc/NYC_Transit_Subway_Entrance_And_Exit_Data.xlsx") %>%
+  read_xlsx("./datanyc/NYC_Transit_Subway_Entrance_And_Exit_Data.xlsx") %>% 
   janitor::clean_names()
 ```
 
-```{r}
+```{r,warning = FALSE}
 subway_df = 
   select(nycsubway_df, line:entry, vending, ada) %>%
   mutate(entry = recode(entry, "YES" = "TRUE", "NO" = "FALSE"), entry = as.logical(entry),route8 = as.character(route8), route9 = as.character(route9), route10 = as.character(route10),route11 = as.character(route11))
@@ -93,6 +93,8 @@ the dataset contains `r names(subway_df)`.
 the data cleaning steps contain janitor, select and recode.
 
 the dimension of the resulting dataset is `r nrow(subway_df)`*`r ncol(subway_df)`. 
+
+the data is not tidy, because the variables' data types are different.
 
 
 How many distinct stations are there? 
@@ -107,8 +109,17 @@ nrow(filter(distinct(subway_df,station_name, line, .keep_all = T), ada == TRUE))
 
 What proportion of station entrances / exits without vending allow entrance?
 ```{r}
-nrow(filter(subway_df, entry == FALSE))/nrow(subway_df)
+  without_vending = 
+  filter(subway_df, vending == "NO")
+
+  without_vending_allow_entrance = 
+  filter(subway_df, vending == "NO") %>% 
+  filter(entry == T)
+
+proportion = 
+  nrow(without_vending_allow_entrance) / nrow(without_vending)
 ```
+
 
 Reformat data
 
@@ -116,15 +127,27 @@ Reformat data
 tidy_subway = pivot_longer(subway_df, route1:route11,
                            names_to = "route_name",
                            values_to = "route_number")
+```
+
+How many distinct stations serve the A train? 
+```{r}
 A_train = 
   filter(tidy_subway, route_number =="A") %>%
   distinct(station_name, line)
+```
+run the A_train, we get the answer 60.
 
+
+Of the stations that serve the A train, how many are ADA compliant?
+```{r}
 A_train = 
   filter(tidy_subway, route_number =="A") %>%
   filter(ada == "TRUE") %>%
   distinct(station_name, line)
 ```
+run the A_train, we get the answer 17.
+
+
 
 ## Problem 3
 
@@ -168,3 +191,44 @@ pols_snp_unemployment=
   left_join(unemployment_df, by= c("year" = "year","month" = "month"))
 ```
 
+
+## a short description about these datasets.
+
+The first dataset is pols_month. The details are as follows:
+
+There are `r nrow(pols_month_df)` rows and `r ncol(pols_month_df)` columns in this dataset. The dimension is `r dim(pols_month_df)`.
+
+The variables are `r names(pols_month_df)`.
+("dem" represents democratic party, "gop" represents republican party.)
+
+The range of years is `r range(pols_month_df$year)`.
+
+
+
+The second dataset is snp. The details are as follows:
+
+There are `r nrow(snp_df)` rows and `r ncol(snp_df)` columns. The dimension is `r dim(snp_df)`.
+
+The variables are `r names(snp_df)`.
+
+The range of years is `r range(snp_df$year)`.
+
+
+
+The third dataset is unemployment. The details are as follows:
+
+There are `r nrow(unemployment_df)` rows and `r ncol(unemployment_df)` columns. The dimension is `r dim(unemployment_df)`.
+
+The variables are `r names(unemployment_df)`.
+
+The range of years is `r range(unemployment_df$year)`.
+
+
+
+Merging snp into pols_month, and merging unemployment into the result creates the final dataset. The details about final dataset are as follows:
+
+There are `r nrow(pols_snp_unemployment)` rows and `r ncol(pols_snp_unemployment)` columns. The dimension is `r dim(pols_snp_unemployment)`.
+
+The variables are `r names(pols_snp_unemployment)`.
+
+The range of years is `r range(pols_snp_unemployment$year)`.
